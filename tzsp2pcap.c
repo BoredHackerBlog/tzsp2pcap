@@ -101,29 +101,20 @@ static void request_terminate_handler(int signum) {
 static int setup_tzsp_listener(uint16_t listen_port) {
 	int result;
 
-	int sockfd = socket(PF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+	int sockfd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (sockfd == -1) {
 		perror("socket()");
 		goto err_exit;
 	}
 
-	int on = 0;
-	result = setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY,
-	                    (void*)&on, sizeof(on));
-	if (result == -1) {
-		perror("setsockopt()");
-		goto err_close;
-	}
-
-	struct sockaddr_in6 listen_address = {
-		#ifdef SIN6_LEN
-		.sin6_len = sizeof(struct sockaddr_in6),
+	struct sockaddr_in listen_address = {
+		#ifdef SIN_LEN
+		.sin_len = sizeof(struct sockaddr_in),
 		#endif
 
-		.sin6_family = AF_INET6,
-		.sin6_port = ntohs(listen_port),
-		.sin6_flowinfo = 0,
-		.sin6_addr = in6addr_any,
+		.sin_family = AF_INET,
+		.sin_port = htons(listen_port),
+		.sin_addr = INADDR_ANY,
 	};
 
 	result = bind(sockfd, (struct sockaddr*) &listen_address, sizeof(listen_address));
@@ -230,10 +221,10 @@ static void run_postrotate_command(struct my_pcap_t *my_pcap, const char *filena
 #endif
 	if (execlp(my_pcap->postrotate_command, my_pcap->postrotate_command, filename, NULL) == -1) {
 		fprintf(stderr,
-		        "after_logrotate: execlp(%s, %s) failed: %s\n",
-		        my_pcap->postrotate_command,
-		        filename,
-		        strerror(errno));
+			"after_logrotate: execlp(%s, %s) failed: %s\n",
+			my_pcap->postrotate_command,
+			filename,
+			strerror(errno));
     }
 	exit(1);
 }
@@ -276,7 +267,7 @@ static int rotate_dumper(struct my_pcap_t *my_pcap) {
 
 	if (my_pcap->verbose) {
 		fprintf(stderr, "Rotating output file: %s -> %s\n",
-		        rotated_filename, new_filename);
+			rotated_filename, new_filename);
 	}
 
 	close_dumper(my_pcap);
@@ -478,7 +469,7 @@ int main(int argc, char **argv) {
 	signal(SIGCHLD, catch_child);
 
 	if (pipe(self_pipe_fds) == -1) {
-		perror("Creating self-wake pipe\n");
+		perror("Creating self-wake pipe");
 		retval = errno;
 		goto exit;
 	}
